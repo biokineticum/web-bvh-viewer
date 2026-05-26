@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotionScope 3D - Premium BVH Motion Analyzer</title>
+    
+    <!-- Google Fonts for premium technical aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icon library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Standard CSS Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Three.js, OrbitControls, and Chart.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="cyber-lab">
+    <div class="glow-bg"></div>
+    
+    <!-- App Container -->
+    <main id="app-container" class="dashboard-grid">
+        
+        <!-- Header Panel -->
+        <header id="header-panel" class="glass-card header-bar">
+            <div class="logo-area">
+                <div class="cyber-logo-icon">
+                    <i class="fa-solid fa-person-running neon-glow"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>MOTION<span>SCOPE</span> 3D</h1>
+                    <span class="sub-telemetry">BIOMECHANICAL ANALYSIS HUB</span>
+                </div>
+            </div>
+            
+            <div class="controls-area">
+                <label for="bvh-file-input" class="cyber-btn upload-btn">
+                    <i class="fa-solid fa-file-import"></i> LOAD BVH FILE
+                    <input type="file" id="bvh-file-input" accept=".bvh" style="display: none;">
+                </label>
+                
+                <button id="export-data-btn" class="cyber-btn disabled" disabled>
+                    <i class="fa-solid fa-file-csv"></i> EXPORT CSV
+                </button>
+            </div>
+        </header>
+        
+        <!-- 3D Viewport Panel -->
+        <section id="viewport-panel" class="glass-card viewport-container">
+            <div class="viewport-overlay top-left-telemetry">
+                <div id="file-status" class="telemetry-pill">
+                    <span class="status-dot"></span> NO MOTION DATA LOADED
+                </div>
+                <div id="render-fps" class="telemetry-pill">
+                    <i class="fa-solid fa-gauge-high"></i> VIEWPORT: -- FPS
+                </div>
+            </div>
+            
+            <div class="viewport-overlay top-right-options">
+                <button id="reset-cam-btn" class="icon-btn" title="Reset Camera View (F)">
+                    <i class="fa-solid fa-camera-rotate"></i>
+                </button>
+                <button id="grid-toggle-btn" class="icon-btn active" title="Toggle Reference Grid">
+                    <i class="fa-solid fa-border-all"></i>
+                </button>
+                <button id="skeleton-mode-btn" class="icon-btn" title="Toggle Render Mode (Cyber / Solid)">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </button>
+                <button id="trajectory-toggle-btn" class="icon-btn" title="Toggle Joint Trajectory trails">
+                    <i class="fa-solid fa-route"></i>
+                </button>
+                <button id="graphs-toggle-btn" class="icon-btn" title="Open Motion Analytics Graphs">
+                    <i class="fa-solid fa-chart-line"></i>
+                </button>
+            </div>
+            
+            <!-- Canvas for Three.js -->
+            <canvas id="threejs-canvas"></canvas>
+            
+            <!-- Biomechanical Graphs Panel Overlay -->
+            <div id="graphs-modal" class="glass-card graphs-panel">
+                <div class="graphs-panel-header">
+                    <h3><i class="fa-solid fa-chart-area text-neon"></i> SENSOR ANALYTICS</h3>
+                    <button id="close-graphs-btn" class="icon-btn mini" title="Close Panel">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="graphs-panel-body">
+                    <div class="graphs-controls-row">
+                        <label for="graph-joint-select"><i class="fa-solid fa-microchip text-neon"></i> SENSOR:</label>
+                        <select id="graph-joint-select" class="cyber-select">
+                            <option value="">Select Sensor...</option>
+                        </select>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="analytics-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Welcome dropzone -->
+            <div id="drop-overlay" class="drop-overlay-active">
+                <div class="drop-content">
+                    <div class="drop-pulse">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <h3>Drag & Drop BVH File Here</h3>
+                    <p>Or select from your files using the Load button</p>
+                    <span class="tech-specs">SUPPORTED FORMATS: BIOVISION MOTION CAPTURE (.BVH)</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Left Sidebar: Joint Telemetry Panel -->
+        <aside id="telemetry-panel" class="glass-card sidebar left-sidebar">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-chart-line text-neon"></i> JOINT TELEMETRY</h2>
+                <div class="panel-actions">
+                    <select id="joint-select" class="cyber-select">
+                        <option value="">Select Joint...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="panel-body">
+                <!-- Kinematics Grid -->
+                <div class="kinematics-dashboard">
+                    <!-- Position Row -->
+                    <div class="telemetry-metric">
+                        <div class="metric-label">POSITION (M)</div>
+                        <div class="metric-value-grid">
+                            <div class="axis-box px"><span class="axis-tag red">X</span><span id="pos-x" class="axis-val">0.0000</span></div>
+                            <div class="axis-box py"><span class="axis-tag green">Y</span><span id="pos-y" class="axis-val">0.0000</span></div>
+                            <div class="axis-box pz"><span class="axis-tag blue">Z</span><span id="pos-z" class="axis-val">0.0000</span></div>
+                        </div>
+                    </div>
+                    <!-- Velocity Row -->
+                    <div class="telemetry-metric">
+                        <div class="metric-label">VELOCITY (M/S)</div>
+                        <div class="metric-value-grid">
+                            <div class="axis-box vx"><span class="axis-tag red">X</span><span id="vel-x" class="axis-val">0.0000</span></div>
+                            <div class="axis-box vy"><span class="axis-tag green">Y</span><span id="vel-y" class="axis-val">0.0000</span></div>
+                            <div class="axis-box vz"><span class="axis-tag blue">Z</span><span id="vel-z" class="axis-val">0.0000</span></div>
+                        </div>
+                    </div>
+                    <!-- Acceleration Row -->
+                    <div class="telemetry-metric">
+                        <div class="metric-label">ACCELERATION (M/S²)</div>
+                        <div class="metric-value-grid">
+                            <div class="axis-box ax"><span class="axis-tag red">X</span><span id="acc-x" class="axis-val">0.0000</span></div>
+                            <div class="axis-box ay"><span class="axis-tag green">Y</span><span id="acc-y" class="axis-val">0.0000</span></div>
+                            <div class="axis-box az"><span class="axis-tag blue">Z</span><span id="acc-z" class="axis-val">0.0000</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Joint Hierarchy Tree / List -->
+                <div class="joint-hierarchy-container">
+                    <div class="section-title">ALL JOINTS HIERARCHY</div>
+                    <div id="joint-hierarchy-list" class="joint-list scrollable">
+                        <!-- Populated by JS -->
+                        <div class="empty-list-placeholder">No hierarchy parsed yet</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Right Sidebar: Biomechanical Analysis Panel -->
+        <aside id="biomech-panel" class="glass-card sidebar right-sidebar">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-angles-up text-purple"></i> BIOMECHANICAL ANALYSES</h2>
+            </div>
+            <div class="panel-body">
+                <!-- Anatomical Angles -->
+                <div class="biomech-section">
+                    <div class="section-title flex-justify">
+                        <span>ANATOMICAL ANGLES</span>
+                        <span class="active-badge" id="angle-active-count">0 ACTIVE</span>
+                    </div>
+                    
+                    <div class="anatomical-grid scrollable">
+                        <!-- Elbow Joint Left & Right -->
+                        <div class="angle-card" data-angle="RightElbow">
+                            <div class="angle-meta">
+                                <span class="angle-name">R Elbow Flexion</span>
+                                <span class="angle-val-badge" id="angle-r-elbow">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill purple" id="bar-r-elbow" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="angle-card" data-angle="LeftElbow">
+                            <div class="angle-meta">
+                                <span class="angle-name">L Elbow Flexion</span>
+                                <span class="angle-val-badge" id="angle-l-elbow">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill purple" id="bar-l-elbow" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Knee Joint Left & Right -->
+                        <div class="angle-card" data-angle="RightKnee">
+                            <div class="angle-meta">
+                                <span class="angle-name">R Knee Flexion</span>
+                                <span class="angle-val-badge" id="angle-r-knee">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill blue" id="bar-r-knee" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="angle-card" data-angle="LeftKnee">
+                            <div class="angle-meta">
+                                <span class="angle-name">L Knee Flexion</span>
+                                <span class="angle-val-badge" id="angle-l-knee">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill blue" id="bar-l-knee" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Shoulder Left & Right -->
+                        <div class="angle-card" data-angle="RightShoulder_Abd">
+                            <div class="angle-meta">
+                                <span class="angle-name">R Shoulder Abduction</span>
+                                <span class="angle-val-badge" id="angle-r-shoulder-abd">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill cyan" id="bar-r-shoulder-abd" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="angle-card" data-angle="LeftShoulder_Abd">
+                            <div class="angle-meta">
+                                <span class="angle-name">L Shoulder Abduction</span>
+                                <span class="angle-val-badge" id="angle-l-shoulder-abd">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill cyan" id="bar-l-shoulder-abd" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="angle-card" data-angle="RightHip_Flex">
+                            <div class="angle-meta">
+                                <span class="angle-name">R Hip Flexion</span>
+                                <span class="angle-val-badge" id="angle-r-hip-flex">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill green" id="bar-r-hip-flex" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="angle-card" data-angle="LeftHip_Flex">
+                            <div class="angle-meta">
+                                <span class="angle-name">L Hip Flexion</span>
+                                <span class="angle-val-badge" id="angle-l-hip-flex">0.0°</span>
+                            </div>
+                            <div class="angle-visual-bar">
+                                <div class="fill green" id="bar-l-hip-flex" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Range of Motion Metrics -->
+                <div class="biomech-section">
+                    <div class="section-title">RANGE OF MOTION (ROM)</div>
+                    <div id="rom-list" class="rom-container scrollable">
+                        <!-- Populated by JS -->
+                        <div class="empty-list-placeholder">No ROM calculated yet</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Bottom Panel: Master Timeline & Playback Panel -->
+        <footer id="playback-panel" class="glass-card playback-bar">
+            <div class="playback-controls">
+                <button id="prev-frame-btn" class="icon-control-btn" title="Previous Frame (Left Arrow)">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                
+                <button id="play-pause-btn" class="play-btn-circle" title="Play / Pause (Space)">
+                    <i class="fa-solid fa-play" id="play-icon"></i>
+                </button>
+                
+                <button id="next-frame-btn" class="icon-control-btn" title="Next Frame (Right Arrow)">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+            </div>
+            
+            <div class="timeline-container">
+                <div class="timeline-slider-wrapper">
+                    <input type="range" id="timeline-slider" min="0" max="0" value="0" step="1">
+                    <div class="slider-progress" id="slider-progress"></div>
+                </div>
+                <div class="timeline-labels">
+                    <span id="time-current">0.000s</span>
+                    <span class="telemetry-pill mini" id="frame-counter">FRAME 0 / 0</span>
+                    <span id="time-total">0.000s</span>
+                </div>
+            </div>
+            
+            <div class="speed-control-area">
+                <span class="speed-label"><i class="fa-solid fa-gauge"></i> SPEED</span>
+                <select id="playback-speed" class="cyber-select speed-select">
+                    <option value="0.25">0.25x (Slow)</option>
+                    <option value="0.5">0.5x</option>
+                    <option value="1.0" selected>1.0x (Normal)</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2.0">2.0x (Fast)</option>
+                </select>
+            </div>
+        </footer>
+        
+    </main>
+
+    <!-- UI Overlay for interactive notifications/messages -->
+    <div id="notification-toast" class="toast">
+        <i id="toast-icon" class="fa-solid fa-circle-info"></i>
+        <span id="toast-message">Application Initialized.</span>
+    </div>
+
+    <!-- Application scripts -->
+    <script src="js/bvhParser.js"></script>
+    <script src="js/kinematics.js"></script>
+    <script src="js/scene3d.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
