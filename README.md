@@ -1,5 +1,7 @@
 # MotionScope 3D - Premium BVH Motion Analyzer
 
+Designed and engineered by **[Biokineticum](https://biokineticum.com)**.
+
 **MotionScope 3D** is a state-of-the-art, browser-based 3D Biovision Hierarchy (BVH) motion visualizer and biomechanical analytics suite. Engineered entirely in JavaScript using **Three.js** for WebGL rendering and **Chart.js** for telemetry plotting, it offers clinical-grade motion capture analytics inside a responsive cyber-laboratory dark-theme dashboard.
 
 ---

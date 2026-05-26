@@ -1006,3 +1006,19 @@ body, html {
     border-radius: 4px;
     font-size: 10px;
 }
+
+/* Designer Link Styling */
+.biok-link {
+    color: var(--color-neon-teal);
+    text-decoration: none;
+    font-weight: 700;
+    transition: var(--transition-smooth);
+    border-bottom: 1px dashed rgba(102, 252, 241, 0.4);
+    padding-bottom: 1px;
+}
+
+.biok-link:hover {
+    color: #ffffff;
+    border-bottom-color: #ffffff;
+    text-shadow: 0 0 8px rgba(102, 252, 241, 0.6);
+}
